@@ -48,11 +48,11 @@ run_perf_test(GameFile, OutputFile, SecondsToRun) :-
         ;
           writeln("some other timeout thing here")
         ),
-        random_member(X, ["a", "b", "c", "d", "e"]),
+%        random_member(X, ["a", "b", "c", "d", "e"]),
 %        OurList is ["a", "b", "c", "d", "e"],
-        printf("Bar: %s\n", [a, b, c, d, e]),
-        random(["a", "b", "c", "d", "e"], X),
-        printf("Foo: %s\n", X),
+%        printf("Bar: %s\n", [[a, b, c, d, e]]),
+%        random(["a", "b", "c", "d", "e"], X),
+%        printf("Foo: %s\n", X),
 	writeln("Hello, world!").
 
 random_member(Var, List) :-
@@ -81,7 +81,12 @@ continue_rollout :-
         select_moves(Roles, Moves, State),
 	state_update(State, Moves, NewState),
         set_current_state(NewState),
-        (terminal(NewState) ; continue_rollout).
+        (terminal(NewState)
+         -> record_stats
+         ; continue_rollout).
+
+record_stats :-
+        writeln("Should be recording stats here").
 
 %select_moves(Roles, Moves, State) :-
 %        select_per_player_move(Roles, [], State).
