@@ -26,14 +26,8 @@
 
 run_perf_test(GameFile, OutputFile, SecondsToRun) :-
         printf("GameFile is %s\n", GameFile),
-%        open(GameFile,'read',GameStream),
-%        read_string(GameStream, end_of_file, _, GameString),
-%	close(GameStream),
-%        printf("Game contents: %s\n", GameString),
-%        parse_gdl_description_string(GameString, Axioms),
         printf("OutputFile is %s\n", OutputFile),
         load_rules_from_file(GameFile),
-%        run_one_rollout,
         printf("SECONDS_TO_RUN is %d\n", SecondsToRun),
         shelf_create(agg/2, 0, StatCounter),
         current_time(Now),
@@ -61,10 +55,22 @@ run_perf_test(GameFile, OutputFile, SecondsToRun) :-
 %        printf("Bar: %s\n", [[a, b, c, d, e]]),
 %        random(["a", "b", "c", "d", "e"], X),
 %        printf("Foo: %s\n", X),
+        write_stats_to_file(OutputFile, StatCounter, TimePassed),
 	writeln("Hello, world!").
 
-random_member(Var, List) :-
-        select(Var, List, _).
+write_stats_to_file(OutputFile, StatCounter, TimePassed) :-
+        open(OutputFile, 'write', Stream),
+        Milliseconds is TimePassed * 1000,
+        printf(Stream, "millisecondsTaken = %.0f\n", [Milliseconds]),
+        NumRollouts is shelf_get(StatCounter, 1),
+        printf(Stream, "numRollouts = %d\n", [NumRollouts]),
+        NumStateChanges is shelf_get(StatCounter, 2),
+        printf(Stream, "numStateChanges = %d\n", [NumStateChanges]),
+        printf(Stream, "version = 1.1\n", []),
+        close(Stream).
+
+%random_member(Var, List) :-
+%        select(Var, List, _).
 
 rollouts_loop(StatCounter) :-
         writeln("Do this a bunch"),
