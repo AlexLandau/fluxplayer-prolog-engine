@@ -35,19 +35,27 @@ run_perf_test(GameFile, OutputFile, SecondsToRun) :-
         load_rules_from_file(GameFile),
 %        run_one_rollout,
         printf("SECONDS_TO_RUN is %d\n", SecondsToRun),
+        shelf_create(agg/2, 0, StatCounter),
         current_time(Now),
         Deadline is Now+SecondsToRun,
         set_deadline(Deadline),
         time_to_deadline(TimeToDeadline),
         (TimeToDeadline>0 ->
           timeout(
-            loop_message,
+            rollouts_loop(StatCounter),
             TimeToDeadline,
             writeln("timeout done")
           )
         ;
           writeln("some other timeout thing here")
         ),
+        current_time(EndTime),
+        TimePassed is EndTime - Now,
+        printf("TimePassed: %p\n", [TimePassed]),
+        NumRollouts is shelf_get(StatCounter, 1),
+        printf("NumRollouts: %p\n", [NumRollouts]),
+        NumStateChanges is shelf_get(StatCounter, 2),
+        printf("NumStateChanges: %p\n", NumStateChanges),
 %        random_member(X, ["a", "b", "c", "d", "e"]),
 %        OurList is ["a", "b", "c", "d", "e"],
 %        printf("Bar: %s\n", [[a, b, c, d, e]]),
@@ -58,16 +66,16 @@ run_perf_test(GameFile, OutputFile, SecondsToRun) :-
 random_member(Var, List) :-
         select(Var, List, _).
 
-loop_message :-
+rollouts_loop(StatCounter) :-
         writeln("Do this a bunch"),
-        run_one_rollout,
+        run_one_rollout(StatCounter),
 % TODO: Add statistics here?
-        loop_message.
+        rollouts_loop(StatCounter).
 
-run_one_rollout :-
+run_one_rollout(StatCounter) :-
 	initial_state(InitialState),
 	set_current_state(InitialState),
-	continue_rollout.
+	continue_rollout(0, StatCounter).
 %        get_current_state(State),
 %        goal(_, Value, State),
 %        printf("Goals are: %p", [Value]).
@@ -75,18 +83,23 @@ run_one_rollout :-
 
 % Now need to figure out Prolog control structures
 % Need one move per role
-continue_rollout :-
+continue_rollout(StateChangesSoFar, StatCounter) :-
         roles(Roles),
         get_current_state(State),
         select_moves(Roles, Moves, State),
 	state_update(State, Moves, NewState),
         set_current_state(NewState),
+        NewStateChanges is StateChangesSoFar + 1,
         (terminal(NewState)
-         -> record_stats
-         ; continue_rollout).
+         -> record_stats(NewStateChanges, StatCounter)
+         ; continue_rollout(NewStateChanges, StatCounter)).
 
-record_stats :-
-        writeln("Should be recording stats here").
+record_stats(StateChanges, StatCounter) :-
+        shelf_inc(StatCounter, 1), % num rollouts
+        OldStatesTotal is shelf_get(StatCounter, 2),
+        NewStatesTotal is OldStatesTotal + StateChanges,
+        shelf_set(StatCounter, 2, NewStatesTotal),
+        printf("Had %p state changes\n", [StateChanges]).
 
 %select_moves(Roles, Moves, State) :-
 %        select_per_player_move(Roles, [], State).
