@@ -9,33 +9,20 @@
 :- lib(random).
 
 run_perf_test(GameFile, OutputFile, SecondsToRun) :-
-        printf("GameFile is %s\n", GameFile),
-        printf("OutputFile is %s\n", OutputFile),
         load_rules_from_file(GameFile),
-        printf("SECONDS_TO_RUN is %d\n", SecondsToRun),
         shelf_create(agg/2, 0, StatCounter),
         current_time(Now),
         Deadline is Now+SecondsToRun,
         set_deadline(Deadline),
         time_to_deadline(TimeToDeadline),
-        (TimeToDeadline>0 ->
-          timeout(
-            rollouts_loop(StatCounter),
-            TimeToDeadline,
-            writeln("timeout done")
-          )
-        ;
-          writeln("some other timeout thing here")
+        timeout(
+          rollouts_loop(StatCounter),
+          TimeToDeadline,
+          writeln("test done")
         ),
         current_time(EndTime),
         TimePassed is EndTime - Now,
-        printf("TimePassed: %p\n", [TimePassed]),
-        NumRollouts is shelf_get(StatCounter, 1),
-        printf("NumRollouts: %p\n", [NumRollouts]),
-        NumStateChanges is shelf_get(StatCounter, 2),
-        printf("NumStateChanges: %p\n", NumStateChanges),
-        write_stats_to_file(OutputFile, StatCounter, TimePassed),
-	writeln("Hello, world!").
+        write_stats_to_file(OutputFile, StatCounter, TimePassed).
 
 write_stats_to_file(OutputFile, StatCounter, TimePassed) :-
         open(OutputFile, 'write', Stream),
@@ -49,7 +36,6 @@ write_stats_to_file(OutputFile, StatCounter, TimePassed) :-
         close(Stream).
 
 rollouts_loop(StatCounter) :-
-        writeln("Do this a bunch"),
         run_one_rollout(StatCounter),
         rollouts_loop(StatCounter).
 
@@ -75,13 +61,11 @@ record_stats(StateChanges, StatCounter) :-
         shelf_inc(StatCounter, 1), % num rollouts
         OldStatesTotal is shelf_get(StatCounter, 2),
         NewStatesTotal is OldStatesTotal + StateChanges,
-        shelf_set(StatCounter, 2, NewStatesTotal),
-        printf("Had %p state changes\n", [StateChanges]).
+        shelf_set(StatCounter, 2, NewStatesTotal).
 
 select_moves([], [], _).
 select_moves([Role|_], [MoveForRole|_], State) :-
-        get_random_move(Role, MoveForRole, State),
-        printf("Role %p does move %p\n", [Role, MoveForRole]).
+        get_random_move(Role, MoveForRole, State).
 
 :- mode get_random_move(++, -, ++).
 get_random_move(Role, Move, Z) :-
